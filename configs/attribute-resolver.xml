@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This file is an EXAMPLE configuration file. While the configuration 
+	presented in this example file is functional, it isn't very interesting. 
+	However, there are lots of example attributes, encoders, and a couple example 
+	data connectors. Not all attribute definitions, data connectors, or principal 
+	connectors are demonstrated. Deployers should refer to the Shibboleth 2 documentation 
+	for a complete list of components and their options. -->
+<resolver:AttributeResolver xmlns:resolver="urn:mace:shibboleth:2.0:resolver"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pc="urn:mace:shibboleth:2.0:resolver:pc"
+	xmlns:ad="urn:mace:shibboleth:2.0:resolver:ad" xmlns:dc="urn:mace:shibboleth:2.0:resolver:dc"
+	xmlns:enc="urn:mace:shibboleth:2.0:attribute:encoder" xmlns:sec="urn:mace:shibboleth:2.0:security"
+	xsi:schemaLocation="urn:mace:shibboleth:2.0:resolver classpath:/schema/shibboleth-2.0-attribute-resolver.xsd
+                                               urn:mace:shibboleth:2.0:resolver:pc classpath:/schema/shibboleth-2.0-attribute-resolver-pc.xsd
+                                               urn:mace:shibboleth:2.0:resolver:ad classpath:/schema/shibboleth-2.0-attribute-resolver-ad.xsd
+                                               urn:mace:shibboleth:2.0:resolver:dc classpath:/schema/shibboleth-2.0-attribute-resolver-dc.xsd
+                                               urn:mace:shibboleth:2.0:attribute:encoder classpath:/schema/shibboleth-2.0-attribute-encoder.xsd
+                                               urn:mace:shibboleth:2.0:security classpath:/schema/shibboleth-2.0-security.xsd">
+
+	<!-- ========================================== -->
+	<!-- Attribute Definitions -->
+	<!-- ========================================== -->
+
+	<!-- Name Identifier related attributes -->
+	<resolver:AttributeDefinition id="transientId" xsi:type="ad:TransientId">
+		<resolver:AttributeEncoder xsi:type="enc:SAML1StringNameIdentifier"
+			nameFormat="urn:mace:shibboleth:1.0:nameIdentifier" />
+		<resolver:AttributeEncoder xsi:type="enc:SAML2StringNameID"
+			nameFormat="urn:oasis:names:tc:SAML:2.0:nameid-format:transient" />
+	</resolver:AttributeDefinition>
+
+	<!-- AttributeDefinition for “isMemberOf” attribute -->
+	<resolver:AttributeDefinition id="isMemberOf"
+		xsi:type="ad:Simple" sourceAttributeID="isMemberOf">
+		<resolver:Dependency ref="grouper" />
+		<resolver:DisplayName xml:lang="en">
+			Team
+		</resolver:DisplayName>
+		<resolver:DisplayName xml:lang="nl">
+			Team
+		</resolver:DisplayName>
+		<resolver:DisplayDescription xml:lang="en">
+			List of teams retrieved from Teams
+		</resolver:DisplayDescription>
+		<resolver:DisplayDescription xml:lang="nl">
+			Lijst van teams opgehaald uit Teams
+		</resolver:DisplayDescription>
+		<resolver:AttributeEncoder xsi:type="enc:SAML1String"
+			name="urn:mace:dir:attribute-def:isMemberOf" />
+		<resolver:AttributeEncoder xsi:type="enc:SAML2String"
+			name="urn:oid:1.2.840.113556.1.666.1" friendlyName="isMemberOf" />
+	</resolver:AttributeDefinition>
+
+	<!-- ========================================== -->
+	<!-- Data Connectors -->
+	<!-- ========================================== -->
+
+	<!-- Grouper Database connector -->
+	<resolver:DataConnector xsi:type="RelationalDatabase"
+		xmlns="urn:mace:shibboleth:2.0:resolver:dc" id="grouper">
+		<ApplicationManagedConnection jdbcDriver="com.mysql.jdbc.Driver"
+			jdbcURL="jdbc:mysql://localhost:3306/teams" 
+			jdbcUserName="aa-user"
+			jdbcPassword="aa-pwd" />
+		<QueryTemplate>
+	<![CDATA[
+		## If it looks like a scope attribute then we query the database, else it will fail
+		#if ($requestContext.principalName.contains("@"))
+		SELECT GROUP_NAME FROM grouper_memberships_lw_v WHERE subject_id = '$requestContext.principalName' AND list_name = 'members'
+		#end
+	]]>
+		</QueryTemplate>
+		<Column columnName="GROUP_NAME" attributeID="isMemberOf" type="String" />
+	</resolver:DataConnector>
+
+	<!-- ========================================== -->
+	<!-- Principal Connectors -->
+	<!-- ========================================== -->
+
+	<resolver:PrincipalConnector xsi:type="pc:Direct"
+		xmlns="urn:mace:shibboleth:2.0:resolver:pc" id="eppn"
+		nameIDFormat="urn:oasis:names:tc:SAML:2.0:nameid-format:eppn" />
+
+</resolver:AttributeResolver>
